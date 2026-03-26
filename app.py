@@ -1,132 +1,97 @@
+import serpapi
 import streamlit as st
-from serpapi import GoogleSearch
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Function to fetch shopping results
-def compare(med_name):
+def compare(product_name):
     params = {
         "engine": "google_shopping",
-        "q": med_name,
-        "location": "India",
-        "gl": "in",                # Geo location India
-        "hl": "en",                 # Language English
-        "currency": "INR",            # Ensure prices in ₹
-        "google_domain": "google.co.in",
-        "api_key": "bacd6640ba78bf7a2ea9c5bdc2121e5e134c602316677976d7bd26692befe029"
+        "q": product_name,
+        "api_key": "7b4f1c879e1ceea1cb33f35be6e42637a3c0f9e9687389c37d8a756708bd6348",
+        "gl": "in"
     }
-    search = GoogleSearch(params)
+    search = serpapi.GoogleSearch(params)
     results = search.get_dict()
-    shopping_results = results.get('shopping_results', [])
+    search_data=results["shopping_results"]
+    return search_data
+
+#header
+
+c1,c2 =st.columns(2)
+c1.image("picture.png", width= 600)
+c2.header("Price comparison system")
 
 
-    #  Filter for medicines only
-    valid_keywords = ["tab", "tablet", "tabs", "inj", "injection", "caps", "cap", "capsule", "syr", "syrup", "sol", "solution", "liq", "liquid", "susp", "suspension", "oint", "ung", "ointment", "cream", "gel", "lotion", "aerosol", "inhaler", "neb", "nebuliser", "spray", "drop", "gtt", "supp", "suppository", "patch", "er", "xr", "xl", "sr", "cr", "dr", "ir", "pfs", "iv", "im", "sc", "id", "sl", "od"]
-    filtered_results = []
-    for item in shopping_results:
-        title = item.get("title", "").lower()
-        if any(keyword in title for keyword in valid_keywords):
-            filtered_results.append(item)
+#"""----------------------------------------------------------------------------------------------------------"""
 
-    return filtered_results
+st.sidebar.title("Compare prices of your Product :")
+Product_name =st.sidebar.text_input("Enter Your Product Name here ️⬇️ : ")
+number = st.sidebar.text_input("Enter number of options here ⬇️ : ")
+product_comp=[]
+pro_price=[]
 
-# Header
-c1, c2 = st.columns(2)
-c1.image("comparison_image.png", width=250)
-c2.header("MEDICINE PRICE COMPARISON SYSTEM")
+if Product_name is not None:
+    if st.sidebar.button("compare Prices"):
+        shopping_results = compare(Product_name)
+        st.sidebar.image(shopping_results[0].get("thumbnail"))
+        lowest_price = float(shopping_results[0].get("price")[1:].replace("₹","").replace(",", "").strip())
+        lowest_price_index = 0
 
-# Sidebar input
-st.sidebar.title("Enter the Name of Medicine ⚕️")
-med_name = st.sidebar.text_input("Enter Name of Medicine Here 👇 :")
-number = st.sidebar.text_input("Enter Number of Options Here 👇 :")
+#"""---------------------------------------------------------------------------------------"""
 
-# Initialize lists
-shopping_results = []
-medicine_comp = []
-med_price = []
+        for i in range(int(number)):
+            current_price =float((shopping_results[i].get('price'))[1:].replace("₹","").replace(",", "").strip())
+            product_comp.append(shopping_results[i].get('source'))
+            pro_price.append(current_price)
 
-if med_name:
-    if st.sidebar.button('Compare Price'):
-
-        # Spinner while fetching data
-        with st.spinner("Please wait while we are fetching prices... ⏳"):
-            shopping_results = compare(med_name)
-
-        if shopping_results:
-            number = int(number) if number and number.isdigit() else 5
-
-            # Initialize lowest price
-            price_str = shopping_results[0].get('price', '')
-            lowest_price = float(price_str.replace("₹","").replace(",","").strip())
-            lowest_price_index = 0
-
-            # Show first product thumbnail in sidebar
-            thumbnail = shopping_results[0].get('thumbnail')
-            if thumbnail:
-                st.sidebar.image(thumbnail)
-
-            # Loop through results
-            for i in range(min(number, len(shopping_results))):
-                price_str = shopping_results[i].get('price', '')
-                current_price = float(price_str.replace("₹","").replace(",","").strip())
-
-                # Append for chart
-                medicine_comp.append(shopping_results[i].get('source'))
-                med_price.append(current_price)
-
-                # Update lowest price
-                if current_price < lowest_price:
-                    lowest_price = current_price
-                    lowest_price_index = i
-
-                # Display option details
-                st.subheader(f"Option {i+1}")
-                c1, c2 = st.columns(2)
-                c1.write("Company Name")
-                c2.write(shopping_results[i].get('source'))
-
-                c1.write("Title")
-                c2.write(shopping_results[i].get('title'))
-
-                c1.write("Price")
-                c2.write(f"₹{current_price}")
-
-                url = shopping_results[i].get('product_link')
-                c1.write("Click Here To Buy 👉 :")
-                c2.write(f"[Link]({url})")
-
-            # Best option
-            st.subheader("Best option to buy :")
-            best = shopping_results[lowest_price_index]
+        #----------------------------------------------------------------------------------
+            st.title(f"Option {i + 1}")
             c1, c2 = st.columns(2)
-            c1.write("Company Name")
-            c2.write(best.get('source'))
+            c1.write("Company : ")
+            c2.write(shopping_results[i].get('source'))
 
-            c1.write("Title")
-            c2.write(best.get('title'))
+            c1.write("Title : ")
+            c2.write(shopping_results[i].get('title'))
 
-            best_price_str = best.get('price', '')
-            best_price = float(best_price_str.replace("₹","").replace("$","").replace(",","").strip())
-            c1.write("Price")
-            c2.write(f"₹{best_price}")
+            c1.write("Price : ")
+            c2.write(shopping_results[i].get('price'))
 
-            url = best.get('product_link')
-            c1.write("Click Here To Buy 👉 :")
-            c2.write(f"[Link]({url})")
+            url = shopping_results[i].get('product_link')
+            c1.write("Buy Link : ")
+            c2.markdown(f'<a href="{url}" target="_blank">Link</a>', unsafe_allow_html=True)
 
-            # Chart comparison
-            df = pd.DataFrame({'Company': medicine_comp, 'Price': med_price})
 
-            st.title("Chart Comparison:")
-            st.bar_chart(df.set_index('Company'))
+#"""---------------------------------------------------------------------------------"""
 
-            fig, ax = plt.subplots()
-            ax.pie(med_price, labels=medicine_comp, shadow=True, autopct='%1.1f%%')
-            ax.axis("equal")
-            st.pyplot(fig)
+            if current_price <= lowest_price:
+                lowest_price = current_price
+                lowest_price_index = i
 
-        else:
-            st.warning("No shopping results found for this medicine.")
+        # This is Best Option to buy
+        st.title("Best option to buy")
+        c1, c2 = st.columns(2)
+        c1.write("Company : ")
+        c2.write(shopping_results[lowest_price_index].get('source'))
 
-else:
-    st.warning("Please enter a medicine name.")
+        c1.write("Title : ")
+        c2.write(shopping_results[lowest_price_index].get('title'))
+
+        c1.write("Price : ")
+        c2.write(shopping_results[lowest_price_index].get('price'))
+
+        url = shopping_results[lowest_price_index].get('product_link')
+        c1.write("Buy Link : ")
+        c2.markdown(f'<a href="{url}" target="_blank">Link</a>', unsafe_allow_html=True)
+
+
+# ------------------------------------------------------------------------------------------
+        #Graphs comparison
+
+        df = pd.DataFrame({"Price": pro_price}, index=product_comp)
+        st.title("Chart Comparison : ")
+        st.bar_chart(df)
+
+        fig, ax = plt.subplots()
+        ax.pie(pro_price, labels=product_comp, shadow=True, startangle=90)
+        ax.axis('equal')
+        st.pyplot(fig)
